@@ -4,8 +4,9 @@ push = require 'push'
 -- include library for classes
 Class = require 'class'
 
--- include our own Bird class
+-- include our own Bird and Pipe class
 require 'Bird'
+require 'Pipe'
 
 -- physical dimensions
 WINDOW_WIDTH = 1280
@@ -32,6 +33,12 @@ local BACKGROUND_LOOPING_POINT = 413
 
 -- create our bird
 local bird = Bird()
+
+-- create table of pipes
+local pipes = {}
+
+-- track spawn time of pipes
+local spawnTimer = 0
 
 function love.load()
   love.graphics.setDefaultFilter('nearest', 'nearest')
@@ -71,7 +78,26 @@ function love.update(dt)
   backgroundScroll = (backgroundScroll + BACKGROUND_SCROLL_SPEED * dt) % BACKGROUND_LOOPING_POINT
   groundScroll = (groundScroll + GROUND_SCROLL_SPEED * dt) % VIRTUAL_WIDTH
 
+  -- spwan logic for new pipe every two seconds
+  spawnTimer = spawnTimer + dt
+
+  if spawnTimer > 2 then
+    table.insert(pipes, Pipe())
+    print('Added new pipe!')
+    spawnTimer = 0
+  end
+
   bird:update(dt)
+
+  -- update every pipe in our scene
+  for k, pipe in pairs(pipes) do
+    pipe:update(dt)
+
+    -- if pipe no longer on screen, remove it
+    if pipe.x < -pipe.width then
+      table.remove(pipes, k)
+    end
+  end
 
   love.keyboard.keysPressed = {}
 end
@@ -81,6 +107,11 @@ function love.draw()
 
   -- draw background image at top left (0, 0)
   love.graphics.draw(background, -backgroundScroll, 0)
+
+  -- iterate over pipes table to draw to screen
+  for k, pipe in pairs(pipes) do
+    pipe:render()
+  end 
 
   -- draw the ground on top of the background 16 pixels from the bottom
   love.graphics.draw(ground, -groundScroll, VIRTUAL_HEIGHT - 16)
