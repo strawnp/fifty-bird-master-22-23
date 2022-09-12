@@ -4,9 +4,10 @@ push = require 'push'
 -- include library for classes
 Class = require 'class'
 
--- include our own Bird and Pipe class
+-- include our own Bird and Pipe and PipePair class
 require 'Bird'
 require 'Pipe'
+require 'PipePair'
 
 -- physical dimensions
 WINDOW_WIDTH = 1280
@@ -31,14 +32,20 @@ local GROUND_SCROLL_SPEED = 60
 -- looping point for background
 local BACKGROUND_LOOPING_POINT = 413
 
+-- looping point for ground
+local GROUND_LOOPING_POINT = 514
+
 -- create our bird
 local bird = Bird()
 
 -- create table of pipes
-local pipes = {}
+local pipePairs = {}
 
 -- track spawn time of pipes
 local spawnTimer = 0
+
+-- store last recorded Y value for gap placement
+local lastY = -PIPE_HEIGHT + math.random(80) + 20
 
 function love.load()
   love.graphics.setDefaultFilter('nearest', 'nearest')
@@ -76,26 +83,32 @@ end
 
 function love.update(dt)
   backgroundScroll = (backgroundScroll + BACKGROUND_SCROLL_SPEED * dt) % BACKGROUND_LOOPING_POINT
-  groundScroll = (groundScroll + GROUND_SCROLL_SPEED * dt) % VIRTUAL_WIDTH
+  groundScroll = (groundScroll + GROUND_SCROLL_SPEED * dt) % GROUND_LOOPING_POINT
 
   -- spwan logic for new pipe every two seconds
   spawnTimer = spawnTimer + dt
 
   if spawnTimer > 2 then
-    table.insert(pipes, Pipe())
+    local y = math.max(-PIPE_HEIGHT + 10,
+                math.min(lastY + math.random(-20, 20), VIRTUAL_HEIGHT - 90 - PIPE_HEIGHT))
+    lastY = y
+
+    table.insert(pipePairs, PipePair(y))
     print('Added new pipe!')
     spawnTimer = 0
   end
 
   bird:update(dt)
 
-  -- update every pipe in our scene
-  for k, pipe in pairs(pipes) do
-    pipe:update(dt)
+  -- update every pipe pair in our scene
+  for k, pair in pairs(pipePairs) do
+    pair:update(dt)
+  end
 
-    -- if pipe no longer on screen, remove it
-    if pipe.x < -pipe.width then
-      table.remove(pipes, k)
+  -- remove any flagged pipes
+  for k, pair in pairs(pipePairs) do
+    if pair.remove then
+      table.remove(pipePairs, k)
     end
   end
 
@@ -108,10 +121,10 @@ function love.draw()
   -- draw background image at top left (0, 0)
   love.graphics.draw(background, -backgroundScroll, 0)
 
-  -- iterate over pipes table to draw to screen
-  for k, pipe in pairs(pipes) do
-    pipe:render()
-  end 
+  -- iterate over pipe pairs table to draw to screen
+  for k, pair in pairs(pipePairs) do
+    pair:render()
+  end
 
   -- draw the ground on top of the background 16 pixels from the bottom
   love.graphics.draw(ground, -groundScroll, VIRTUAL_HEIGHT - 16)
