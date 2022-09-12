@@ -47,6 +47,9 @@ local spawnTimer = 0
 -- store last recorded Y value for gap placement
 local lastY = -PIPE_HEIGHT + math.random(80) + 20
 
+-- set scrolling state
+local scrolling = false
+
 function love.load()
   love.graphics.setDefaultFilter('nearest', 'nearest')
 
@@ -70,6 +73,8 @@ function love.keypressed(key)
 
   if key == 'escape' then
     love.event.quit()
+  elseif key == 'return' or key == 'enter' then
+    scrolling = true
   end
 end
 
@@ -82,28 +87,40 @@ function love.keyboard.wasPressed(key)
 end
 
 function love.update(dt)
-  backgroundScroll = (backgroundScroll + BACKGROUND_SCROLL_SPEED * dt) % BACKGROUND_LOOPING_POINT
-  groundScroll = (groundScroll + GROUND_SCROLL_SPEED * dt) % GROUND_LOOPING_POINT
+  if scrolling then
+    backgroundScroll = (backgroundScroll + BACKGROUND_SCROLL_SPEED * dt) % BACKGROUND_LOOPING_POINT
+    groundScroll = (groundScroll + GROUND_SCROLL_SPEED * dt) % GROUND_LOOPING_POINT
 
-  -- spwan logic for new pipe every two seconds
-  spawnTimer = spawnTimer + dt
+    -- spwan logic for new pipe every two seconds
+    spawnTimer = spawnTimer + dt
 
-  if spawnTimer > 2 then
-    local y = math.max(-PIPE_HEIGHT + 10,
-                math.min(lastY + math.random(-20, 20), VIRTUAL_HEIGHT - 90 - PIPE_HEIGHT))
-    lastY = y
+    if spawnTimer > 2 then
+      local y = math.max(-PIPE_HEIGHT + 10,
+                  math.min(lastY + math.random(-20, 20), VIRTUAL_HEIGHT - 90 - PIPE_HEIGHT))
+      lastY = y
 
-    table.insert(pipePairs, PipePair(y))
-    print('Added new pipe!')
-    spawnTimer = 0
-  end
+      table.insert(pipePairs, PipePair(y))
+      print('Added new pipe!')
+      spawnTimer = 0
+    end
 
-  bird:update(dt)
+    bird:update(dt)
 
-  -- update every pipe pair in our scene
-  for k, pair in pairs(pipePairs) do
-    pair:update(dt)
-  end
+    -- update every pipe pair in our scene
+    for k, pair in pairs(pipePairs) do
+      pair:update(dt)
+
+      -- check for collisions
+      for l, pipe in pairs(pair.pipes) do
+        if bird: collides(pipe) then
+          scrolling = false
+        end
+      end
+
+      if pair.x < -PIPE_WIDTH then
+        pair.remove = true
+      end 
+    end
 
   -- remove any flagged pipes
   for k, pair in pairs(pipePairs) do
@@ -111,6 +128,7 @@ function love.update(dt)
       table.remove(pipePairs, k)
     end
   end
+end
 
   love.keyboard.keysPressed = {}
 end
