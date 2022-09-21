@@ -49,6 +49,9 @@ scrolling = true
 function love.load()
   love.graphics.setDefaultFilter('nearest', 'nearest')
 
+  -- seed RNG
+  math.randomseed(os.time())
+
   love.window.setTitle('Fifty Bird')
 
   smallFont = love.graphics.newFont('font.ttf', 8)
@@ -62,7 +65,6 @@ function love.load()
     ['explosion'] = love.audio.newSource('sounds/explosion.wav', 'static'),
     ['hurt'] = love.audio.newSource('sounds/hurt.wav', 'static'),
     ['score'] = love.audio.newSource('sounds/score.wav', 'static'),
-
     ['music'] = love.audio.newSource('sounds/marios_way.mp3', 'static')
   }
 
@@ -83,7 +85,9 @@ function love.load()
   }
   gStateMachine:change('title')
 
+  -- create tables for handling input
   love.keyboard.keysPressed = {}
+  love.mouse.buttonsPressed = {}
 end
 
 function love.resize(w, h)
@@ -106,16 +110,27 @@ function love.keyboard.wasPressed(key)
   end
 end
 
+function love.mousepressed(x, y, button)
+  love.mouse.buttonsPressed[button] = true
+end
+
+function love.mouse.wasPressed(button)
+  return love.mouse.buttonsPressed[button]
+end
+
 function love.update(dt)
   -- scrolling of the background and ground
-  backgroundScroll = (backgroundScroll + BACKGROUND_SCROLL_SPEED * dt) % BACKGROUND_LOOPING_POINT
-  groundScroll = (groundScroll + GROUND_SCROLL_SPEED * dt) % GROUND_LOOPING_POINT
+  if scrolling then
+    backgroundScroll = (backgroundScroll + BACKGROUND_SCROLL_SPEED * dt) % BACKGROUND_LOOPING_POINT
+    groundScroll = (groundScroll + GROUND_SCROLL_SPEED * dt) % GROUND_LOOPING_POINT
+  end
 
   -- update based on current state of state machine
   gStateMachine:update(dt)
 
-  -- reset input table
+  -- reset input tables
   love.keyboard.keysPressed = {}
+  love.mouse.buttonsPressed = {}
 end
 
 function love.draw()
